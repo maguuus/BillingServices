@@ -25,9 +25,9 @@ public class Subscriber
             ? region.Trim().ToUpperInvariant() 
             : throw new ArgumentException("Region cannot be null or empty", nameof(region));
         Status = status;
-        TenureMonths = tenureMonths >= 0 ? tenureMonths : throw new ArgumentException("Tenure months must be non-negative", nameof(tenureMonths));
-        Devices = devices >= 0 ?  devices : throw new ArgumentException("Devices must be non-negative", nameof(devices));
-        BasePrice = basePrice >= 0 ?  basePrice : throw new ArgumentException("Price must be non-negative", nameof(basePrice));
+        TenureMonths = tenureMonths >= 0 ? tenureMonths : throw new ArgumentOutOfRangeException(nameof(tenureMonths), "Tenure months must be non-negative");
+        Devices = devices >= 0 ?  devices : throw new ArgumentOutOfRangeException(nameof(devices), "Devices must be non-negative");
+        BasePrice = basePrice >= 0 ?  basePrice : throw new ArgumentOutOfRangeException(nameof(basePrice), "Price must be non-negative");
     }
 }
 
@@ -51,12 +51,8 @@ public class BillingService
         { 
             SubscriptionStatus.Trial => 0,
             SubscriptionStatus.Student => s.BasePrice * 0.5,
-            SubscriptionStatus.Pro => s switch
-            {
-                { IsLoyal: true } => s.BasePrice * 0.85,
-                { IsLongTerm: true } => s.BasePrice * 0.9,
-                _ => s.BasePrice
-            },
+            SubscriptionStatus.Pro when s.IsLoyal => s.BasePrice * 0.85,
+            SubscriptionStatus.Pro when s.IsLongTerm => s.BasePrice * 0.9,
             _ => s.BasePrice 
         };
     
@@ -84,7 +80,7 @@ public class BillingService
         };
 }
 
-public class Program
+public static class Program
 {
     public static void Main()
     {
@@ -92,10 +88,10 @@ public class Program
         
         var subscribers = new List<Subscriber>
         {
-            new Subscriber("A-1", "US", SubscriptionStatus.Trial, 0, 1, 9.99),
-            new Subscriber("B-2", "US", SubscriptionStatus.Pro, 18, 4, 14.99),
-            new Subscriber("C-3", "EU", SubscriptionStatus.Student, 6, 2, 12.99),
-            new Subscriber("D-4", "CA", SubscriptionStatus.Basic, 3, 1, 8.99)
+            new("A-1", "US", SubscriptionStatus.Trial, 0, 1, 9.99),
+            new("B-2", "US", SubscriptionStatus.Pro, 18, 4, 14.99),
+            new("C-3", "EU", SubscriptionStatus.Student, 6, 2, 12.99),
+            new("D-4", "CA", SubscriptionStatus.Basic, 3, 1, 8.99)
         };
 
         foreach (var subscriber in subscribers)
@@ -105,10 +101,10 @@ public class Program
             if (isValid)
             {
                 var total = billing.CalcTotal(subscriber);
-                Console.WriteLine($"Subscriber {subscriber.Id}: ${total:F2} " +
-                                  $"(Status: {subscriber.Status}, " +
-                                  $"Tenure: {subscriber.TenureMonths} months, " +
-                                  $"Devices: {subscriber.Devices})");
+                Console.WriteLine($"Price for {subscriber.Id}: ${total:F2} " +
+                                  $"({subscriber.Status}, " +
+                                  $"{subscriber.TenureMonths} months, " +
+                                  $"{subscriber.Devices} devices)");
             }
             else
             {
